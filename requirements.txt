@@ -3,3 +3,4 @@ uvicorn[standard]==0.34.2
 httpx==0.28.1
 pydantic-settings==2.9.1
 anime-dl-core==0.5.1
+yt-dlp>=2025.11.12,<2027.0
