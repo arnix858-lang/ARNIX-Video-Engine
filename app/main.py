@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import json
-import os
 import re
 from urllib.parse import urljoin, urlparse
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import JSONResponse, Response, StreamingResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -93,9 +91,14 @@ async def resolve(body: ResolveRequest):
 
 
 @app.get("/api/v1/alloha/search")
-async def alloha_search(q: str = Query(min_length=2, max_length=200)):
+async def alloha_search(
+    q: str = Query(min_length=2, max_length=200),
+    season: int = Query(default=1, ge=1, le=100),
+    episode: int = Query(default=1, ge=1, le=1000),
+    translation: str | None = Query(default=None, max_length=100),
+):
     try:
-        return {"results": search_alloha(q, settings.alloha_token)}
+        return {"results": search_alloha(q, settings.alloha_token, season, episode, translation)}
     except ParserError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
