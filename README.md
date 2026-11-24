@@ -10,6 +10,7 @@ Independent video-source resolver and HLS gateway built with FastAPI.
 - Embed resolution through the MIT-licensed `anime-dl-core==0.5.1` library.
 - Kodik and the other player adapters supported by that library, when a valid embed URL is supplied.
 - Alloha catalog search through the library's `Alloha` helper.
+- Optional iframe stream extraction through `yt-dlp` for supported public players; unsupported JavaScript-only players may still return iframe-only.
 - Signed HLS gateway with one-hour playback tokens, relative segment/key/playlist rewriting, byte-range forwarding, and chunked streaming for media files.
 - Manual redirect validation and blocking of private/local upstream IP addresses to reduce SSRF exposure.
 - Global CORS support for browser-based clients.
@@ -39,6 +40,7 @@ Open `http://localhost:8000/docs`.
 - `GET /api/v1/providers`
 - `POST /api/v1/resolve` with JSON `{"url":"https://...embed..."}`
 - `GET /api/v1/alloha/search?q=...`
+- `GET /api/v1/alloha/resolve?q=...&season=1&episode=1&translation=Anilibria` (searches Alloha and attempts yt-dlp stream extraction)
 - `GET /api/v1/gateway/{signed-token}` (tokens are generated only by the resolver)
 
 ## Configuration
