@@ -42,35 +42,48 @@ def resolve_embed(url: str) -> dict[str, Any]:
 
 
 def search_alloha(query: str, token: str | None = None, season: int = 1, episode: int = 1, translation: str | None = None) -> list[dict[str, Any]]:
-    """Search Alloha catalog and return its supported iframe fallback.
-
-    Alloha's current player link is an iframe. The library documentation does
-    not claim direct HLS extraction from Alloha, so this function never invents
-    a direct video URL.
-    """
+    """Search Alloha and build an iframe using a dub available for this episode."""
     kwargs = {"token": token} if token else {}
     try:
         with Alloha(**kwargs) as source:
             item = source.find(name=query)
             if item is None:
                 return []
-            # find() may return one object or a sequence depending on source version.
             items = item if isinstance(item, (list, tuple)) else [item]
             output = []
             for anime in items:
-                translations = [t.name for t in getattr(anime, "translations", [])]
+                # Alloha dubs can differ by episode; anime.translations is only
+                # a title-level list and may contain unavailable choices.
+                voices = source.translations_for(anime, season=season, episode=episode)
+                voice_names = [getattr(v, "name", str(v)) for v in voices]
+                selected = None
+                if translation:
+                    selected = next(
+                        (v for v in voices if getattr(v, "name", str(v)).casefold() == translation.casefold()),
+                        None,
+                    )
+                if selected is None and voices:
+                    selected = voices[0]
+                if not selected:
+                    raise ParserError(
+                        f"No Alloha translations available for season {season}, episode {episode}"
+                    )
+                selected_name = getattr(selected, "name", str(selected))
                 output.append({
                     "name": getattr(anime, "name", None),
                     "year": getattr(anime, "year", None),
                     "category": getattr(anime, "category", None),
                     "seasons": getattr(anime, "seasons", {}),
-                    "translations": translations,
+                    "translations": voice_names,
+                    "selected_translation": selected_name,
                     "iframe": source.iframe(
                         anime, season=season, episode=episode,
-                        translation=translation or (translations[0] if translations else None),
+                        translation=selected_name,
                     ),
                     "note": "Alloha provides an iframe; direct HLS extraction is not exposed by the library.",
                 })
             return output
+    except ParserError:
+        raise
     except Exception as exc:
         raise ParserError(f"Alloha search failed: {exc}") from exc
