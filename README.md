@@ -8,10 +8,12 @@ Independent video-source resolver and HLS gateway built with FastAPI.
 - Embed resolution through the MIT-licensed `anime-dl-core==0.5.1` library.
 - Kodik and the other player adapters supported by that library, when a valid embed URL is supplied.
 - Alloha catalog search through the library's `Alloha` helper.
-- Signed HLS gateway that rewrites relative playlist segments and URI attributes.
+- Signed HLS gateway with one-hour playback tokens, relative segment/key/playlist rewriting, byte-range forwarding, and chunked streaming for media files.
+- Manual redirect validation and blocking of private/local upstream IP addresses to reduce SSRF exposure.
+- Global CORS support for browser-based clients.
 - Docker image and GitHub Actions CI.
 
-## Important provider limitation
+## Gateway behavior\n\nThe gateway forwards HTTP byte-range requests and streams media chunks instead of buffering entire video files in memory. HLS playlists are read and rewritten so child playlists, segments, encryption keys, and map resources pass through the signed gateway. Tokens expire after one hour. Redirect destinations are revalidated, and private/local IP destinations are blocked. This is a baseline security layer, not a substitute for deployment-level network egress controls.\n\n## Important provider limitation
 
 Alloha is a catalog source, not a direct-stream resolver in `anime-dl-core`. Its documented integration returns metadata and an iframe URL; the library explicitly says it does not expose Alloha's direct video URLs. This project therefore does not claim direct HLS extraction from Alloha. The Alloha iframe can be used by a compatible client. No DRM, authentication, geo, or paywall bypass is implemented.
 
