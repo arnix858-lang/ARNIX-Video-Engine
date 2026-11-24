@@ -41,7 +41,7 @@ def resolve_embed(url: str) -> dict[str, Any]:
     }
 
 
-def search_alloha(query: str, token: str | None = None) -> list[dict[str, Any]]:
+def search_alloha(query: str, token: str | None = None, season: int = 1, episode: int = 1, translation: str | None = None) -> list[dict[str, Any]]:
     """Search Alloha catalog and return its supported iframe fallback.
 
     Alloha's current player link is an iframe. The library documentation does
@@ -65,6 +65,10 @@ def search_alloha(query: str, token: str | None = None) -> list[dict[str, Any]]:
                     "category": getattr(anime, "category", None),
                     "seasons": getattr(anime, "seasons", {}),
                     "translations": translations,
+                    "iframe": source.iframe(
+                        anime, season=season, episode=episode,
+                        translation=translation or (translations[0] if translations else None),
+                    ),
                     "note": "Alloha provides an iframe; direct HLS extraction is not exposed by the library.",
                 })
             return output
