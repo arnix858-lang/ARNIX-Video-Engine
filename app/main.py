@@ -4,7 +4,7 @@ import re
 from urllib.parse import urljoin, urlparse
 
 import httpx
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
@@ -140,15 +140,8 @@ async def alloha_search(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
-@app.api_route("/api/v1/gateway/{token}", methods=["GET", "HEAD"])
-async def gateway(token: str, request_headers: dict = None):
-    from fastapi import Request
-    # Request headers are passed by FastAPI below through the dependency-free signature.
-    raise HTTPException(status_code=500, detail="Gateway request handler misconfigured")
-
-
 @app.api_route("/api/v1/gateway/{token}", methods=["GET", "HEAD"], include_in_schema=False)
-async def gateway_request(token: str, request: "Request"):
+async def gateway_request(token: str, request: Request):
     payload = verify_payload(token, settings.app_secret)
     url = validate_public_host(str(payload.get("url", "")))
     safe_headers = _safe_headers(payload.get("headers") or {})
