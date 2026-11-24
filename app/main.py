@@ -140,7 +140,7 @@ async def alloha_search(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
-@app.api_route("/api/v1/gateway/{token}", methods=["GET", "HEAD"], include_in_schema=False)
+@app.get("/api/v1/gateway/{token}")
 async def gateway_request(token: str, request: Request):
     payload = verify_payload(token, settings.app_secret)
     url = validate_public_host(str(payload.get("url", "")))
