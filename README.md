@@ -50,3 +50,13 @@ Build and run the Dockerfile on a host that supports long-running containers and
 ## License
 
 Project code: MIT. Third-party libraries retain their own licenses; see their upstream repositories.
+
+## Deploy to Render (free starter)
+
+1. Open the Render Blueprint deployment page for this repository:
+   https://render.com/deploy?repo=https://github.com/arnix858-lang/ARNIX-Video-Engine
+2. Sign in to Render and authorize access to this public GitHub repository.
+3. Render reads `render.yaml`, creates the Docker web service, generates a private `APP_SECRET`, and starts deployment.
+4. When the service becomes **Live**, open `https://YOUR-SERVICE.onrender.com/health` and then `/docs`.
+
+The free Render instance may sleep after inactivity and the first request after sleep can be delayed. For continuous playback or production traffic, use an always-on plan. Add an Alloha token in the Render environment only if you have a valid one; it is not required for the basic health/API endpoints.
