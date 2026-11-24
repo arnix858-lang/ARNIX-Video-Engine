@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from app.parsers.engine import ParserError, resolve_embed, search_alloha
+from app.parsers.engine import ParserError, resolve_embed, resolve_iframe, search_alloha
 from app.security import sign_payload, validate_http_url, validate_public_host, verify_payload
 
 
@@ -136,6 +136,34 @@ async def alloha_search(
 ):
     try:
         return {"results": search_alloha(q, settings.alloha_token, season, episode, translation)}
+    except ParserError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.get("/api/v1/alloha/resolve")
+def alloha_resolve(
+    q: str = Query(min_length=2, max_length=200),
+    season: int = Query(default=1, ge=1, le=100),
+    episode: int = Query(default=1, ge=1, le=1000),
+    translation: str | None = Query(default=None, max_length=100),
+):
+    """Search Alloha and try to extract direct streams from the selected iframe."""
+    try:
+        results = search_alloha(q, settings.alloha_token, season, episode, translation)
+        if not results:
+            return {"results": [], "note": "No matching Alloha titles found."}
+        resolved = []
+        for item in results:
+            entry = dict(item)
+            try:
+                entry["stream"] = resolve_iframe(item["iframe"])
+                entry["stream_status"] = "resolved"
+            except ParserError as exc:
+                entry["stream"] = None
+                entry["stream_status"] = "iframe_only"
+                entry["stream_error"] = str(exc)
+            resolved.append(entry)
+        return {"results": resolved}
     except ParserError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
