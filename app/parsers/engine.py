@@ -87,3 +87,93 @@ def search_alloha(query: str, token: str | None = None, season: int = 1, episode
         raise
     except Exception as exc:
         raise ParserError(f"Alloha search failed: {exc}") from exc
+
+
+
+def resolve_iframe(iframe_url: str) -> dict[str, Any]:
+    """Extract publicly available direct formats from a supported iframe/player URL.
+
+    This uses yt-dlp's site extractors. It does not bypass DRM, login,
+    subscription, or geographic restrictions.
+    """
+    try:
+        import yt_dlp
+
+        options = {
+            "quiet": True,
+            "no_warnings": True,
+            "skip_download": True,
+            "noplaylist": True,
+            "socket_timeout": 20,
+            "retries": 1,
+            "extractor_retries": 1,
+        }
+        with yt_dlp.YoutubeDL(options) as ydl:
+            info = ydl.extract_info(iframe_url, download=False)
+
+        if not info:
+            raise ParserError("The iframe extractor returned no video information")
+
+        entries = info.get("entries") or [info]
+        formats: list[dict[str, Any]] = []
+        for entry in entries:
+            if not entry:
+                continue
+            for item in entry.get("formats") or []:
+                stream_url = item.get("url")
+                if not stream_url:
+                    continue
+                protocol = str(item.get("protocol") or "").lower()
+                if not (stream_url.startswith("https://") or stream_url.startswith("http://")):
+                    continue
+                formats.append({
+                    "format_id": item.get("format_id"),
+                    "quality": item.get("format_note") or item.get("resolution"),
+                    "height": item.get("height"),
+                    "width": item.get("width"),
+                    "tbr": item.get("tbr"),
+                    "ext": item.get("ext"),
+                    "protocol": protocol,
+                    "url": stream_url,
+                    "headers": item.get("http_headers") or entry.get("http_headers") or {},
+                })
+
+        # Some extractors expose only a single top-level media URL.
+        if not formats and info.get("url"):
+            formats.append({
+                "format_id": info.get("format_id"),
+                "quality": info.get("format_note") or info.get("resolution"),
+                "height": info.get("height"),
+                "width": info.get("width"),
+                "ext": info.get("ext"),
+                "protocol": info.get("protocol"),
+                "url": info["url"],
+                "headers": info.get("http_headers") or {},
+            })
+
+        if not formats:
+            raise ParserError(
+                "No direct formats were exposed by this iframe. The player may be unsupported or require browser JavaScript."
+            )
+
+        # Prefer HLS/DASH and higher resolutions, but retain all available formats.
+        formats.sort(
+            key=lambda x: (
+                1 if "m3u8" in str(x.get("protocol", "")).lower() or "dash" in str(x.get("protocol", "")).lower() else 0,
+                x.get("height") or 0,
+                x.get("tbr") or 0,
+            ),
+            reverse=True,
+        )
+        return {
+            "title": info.get("title"),
+            "extractor": info.get("extractor_key") or info.get("extractor"),
+            "duration": info.get("duration"),
+            "thumbnail": info.get("thumbnail"),
+            "formats": formats,
+            "note": "Only formats exposed by supported yt-dlp extractors are returned; DRM and access restrictions are not bypassed.",
+        }
+    except ParserError:
+        raise
+    except Exception as exc:
+        raise ParserError(f"Could not extract streams from iframe: {exc}") from exc
